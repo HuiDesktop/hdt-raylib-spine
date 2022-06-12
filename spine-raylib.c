@@ -103,9 +103,9 @@ void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, V
                     vertex = vertices[vertexIndex + i];
                     rlTexCoord2f(vertex.u, vertex.v);
                     rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
-                    rlVertex3f(position.x + vertex.x, position.y + vertex.y, position.z + anti_z_fighting_index);
+                    rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
                 }
-                rlVertex3f(position.x + vertex.x, position.y + vertex.y, position.z + anti_z_fighting_index);
+                rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
             }
             rlEnd();
 #ifdef SP_DRAW_DOUBLE_FACED

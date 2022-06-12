@@ -1,4 +1,4 @@
-add_library(hdt-raylib-spine SHARED spine-raylib.c spine-raylib.h)
+add_library(hdt-raylib-spine SHARED spine-raylib.c spine-raylib.h spine-export.h spine-hittest.c spine-hittest.h)
 target_include_directories(hdt-raylib-spine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # link spine library
@@ -7,7 +7,7 @@ target_link_libraries(hdt-raylib-spine PUBLIC spine-c)
 
 # temporary link raylib from built dist
 target_include_directories(hdt-raylib-spine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../raylib/include")
-target_link_libraries(hdt-raylib-spine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/lib/raylib.lib)
+target_link_libraries(hdt-raylib-spine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../raylib/lib/raylibdll.lib)
 
 # link winmm (timeBeginPeriod timeEndPeriod)
 target_link_libraries (hdt-raylib-spine PUBLIC winmm)
