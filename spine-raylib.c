@@ -254,7 +254,7 @@ void drawSkeleton(spSkeleton* skeleton, Vector3 position, bool PMA) {
 
             if (slot->data->blendMode != blend_mode)
             {
-                EndBlendMode(); //Need this line for blending to work for some reason
+                EndBlendMode();
                 blend_mode = slot->data->blendMode;
                 switch (blend_mode)
                 {
@@ -316,6 +316,7 @@ void drawSkeleton(spSkeleton* skeleton, Vector3 position, bool PMA) {
             if (slot->data->blendMode != blend_mode)
             {
                 EndBlendMode();
+                blend_mode = slot->data->blendMode;
                 switch (blend_mode)
                 {
                 default: //Normal
