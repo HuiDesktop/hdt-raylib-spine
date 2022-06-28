@@ -71,7 +71,7 @@ void engine_draw_region(Vertex* vertices, Texture* texture, Vector3 position, in
                 vertex = vertices[vertex_order[i]];
                 rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
                 rlTexCoord2f(vertex.u, vertex.v);
-                rlVertex2f(position.x + vertex.x, position.y + vertex.y);
+                rlVertex2f(vertex.x, vertex.y);
             }
         }rlEnd();
 
@@ -91,7 +91,7 @@ void engine_draw_region(Vertex* vertices, Texture* texture, Vector3 position, in
 }
 rlSetTexture(0);
 }
-void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, Vector3 position, int* vertex_order) {
+void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, Vector3 position, int* vertex_order, bool reverse) {
     Vertex vertex;
     {
         for (int vertexIndex = start; vertexIndex < count; vertexIndex += 3) {
@@ -99,12 +99,20 @@ void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, V
             rlBegin(RL_QUADS);
             {
                 int i;
-                for (i = 2; i > -1; i--) {
-                    vertex = vertices[vertexIndex + i];
-                    rlTexCoord2f(vertex.u, vertex.v);
-                    rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
-                    rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
-                }
+                if (reverse)
+                    for (i = 0; i < 3; i++) {
+                        vertex = vertices[vertexIndex + i];
+                        rlTexCoord2f(vertex.u, vertex.v);
+                        rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
+                        rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
+                    }
+                else
+                    for (i = 2; i > -1; i--) {
+                        vertex = vertices[vertexIndex + i];
+                        rlTexCoord2f(vertex.u, vertex.v);
+                        rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
+                        rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
+                    }
                 rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
             }
             rlEnd();
@@ -114,12 +122,12 @@ void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, V
 #endif
 
 #ifdef SP_RENDER_WIREFRAME
-            DrawTriangleLines((Vector2) { vertices[vertexIndex].x + position.x, vertices[vertexIndex].y + position.y },
+            DrawTriangleLines((Vector2) { vertices[vertexIndex].x, vertices[vertexIndex].y },
                 (Vector2) {
-                vertices[vertexIndex + 1].x + position.x, vertices[vertexIndex + 1].y + position.y
+                vertices[vertexIndex + 1].x, vertices[vertexIndex + 1].y
             },
                 (Vector2) {
-                vertices[vertexIndex + 2].x + position.x, vertices[vertexIndex + 2].y + position.y
+                vertices[vertexIndex + 2].x, vertices[vertexIndex + 2].y
             }, vertexIndex == 0 ? RED : GREEN);
 #endif
 
@@ -182,7 +190,7 @@ int VERTEX_ORDER_INVERSE[] = { 4, 2, 1, 0 };
 #define GL_SRC_ALPHA_SATURATE 0x0308
 #define GL_FUNC_ADD 0x8006
 
-void drawSkeleton(spSkeleton* skeleton, Vector3 position, bool PMA) {
+void drawSkeleton(spSkeleton* skeleton, Vector3* position, bool PMA) {
     int blend_mode = 4; //This mode doesn't exist
     int* vertex_order = (skeleton->scaleX * skeleton->scaleY < 0) ? VERTEX_ORDER_NORMAL : VERTEX_ORDER_INVERSE;
     // For each slot in the draw order array of the skeleton
@@ -279,7 +287,7 @@ void drawSkeleton(spSkeleton* skeleton, Vector3 position, bool PMA) {
                 BeginBlendMode(BLEND_CUSTOM);
             }
 
-            engine_draw_region(vertices, texture, position, vertex_order);
+            engine_draw_region(vertices, texture, *position, vertex_order);
         }
         else if (attachment->type == SP_ATTACHMENT_MESH) {
             // Cast to an spMeshAttachment so we can get the rendererObject
@@ -339,7 +347,7 @@ void drawSkeleton(spSkeleton* skeleton, Vector3 position, bool PMA) {
                 BeginBlendMode(BLEND_CUSTOM);
             }
             // Draw the mesh we created for the attachment
-            engine_drawMesh(vertices, 0, vertexIndex, texture, position, vertex_order);
+            engine_drawMesh(vertices, 0, vertexIndex, texture, *position, vertex_order, (skeleton->scaleX < 0) ^(skeleton->scaleY < 0));
         }
     }
     EndBlendMode(); //Exit out

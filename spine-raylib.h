@@ -7,4 +7,4 @@
 #include "hdtldecl.h"
 #include "spine-export.h"
 
-HDTLAPI void drawSkeleton(spSkeleton* skeleton, Vector3 position, bool PMA);
+HDTLAPI void drawSkeleton(spSkeleton* skeleton, Vector3* position, bool PMA);
