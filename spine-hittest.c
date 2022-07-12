@@ -108,7 +108,7 @@ int Point_In_Polygon_2D(PIPQ* q)
 	return isInside;
 }
 
-int __cdecl Point_In_Polygon_2D1(float x, float y, size_t vl, float* ps)
+int  Point_In_Polygon_2D1(float x, float y, size_t vl, float* ps)
 {
 	int isInside = 0;
 	int count = 0;
@@ -183,7 +183,67 @@ int __cdecl Point_In_Polygon_2D1(float x, float y, size_t vl, float* ps)
 static float* tempVerts = NULL;
 static int tempVertsC = 0;
 
-__declspec(dllexport) int spSkeleton_containsPoint(spSkeleton* self, float px, float py) {
+__declspec(dllexport) int spSkeleton_containsPoint(spSkeleton* self, const float px, const float py, HitTestRecorder* re) {
+	float minX = 3.402823466e+38F;
+	float minY = 3.402823466e+38F;
+	float maxX = 1.175494351e-38F;
+	float maxY = 1.175494351e-38F;
+	re->count = 0;
+
+	for (size_t i = 0; i < self->slotsCount; ++i) {
+		spSlot* slot = self->drawOrder[i];
+		if (!slot->bone->active) continue;
+		int verticesLength = 0;
+		spAttachment* attachment = slot->attachment;
+
+		if (attachment != NULL && attachment->type == SP_ATTACHMENT_REGION) {
+			spRegionAttachment* regionAttachment = SUB_CAST(spRegionAttachment, attachment);
+			verticesLength = 8;
+			if (tempVertsC < verticesLength) {
+				if (tempVerts != NULL) _spFree(tempVerts);
+				tempVerts = CALLOC(float, verticesLength);
+				tempVertsC = verticesLength;
+			}
+			spRegionAttachment_computeWorldVertices(regionAttachment, slot->bone, tempVerts, 0, 2);
+		}
+		else if (attachment != NULL && attachment->type == SP_ATTACHMENT_MESH) {
+			spVertexAttachment* mesh = &(SUB_CAST(spMeshAttachment, attachment))->super;
+			verticesLength = SUB_CAST(spMeshAttachment, attachment)->hullLength;
+			if (tempVertsC < verticesLength) {
+				if (tempVerts != NULL) _spFree(tempVerts);
+				tempVerts = CALLOC(float, verticesLength);
+				tempVertsC = verticesLength;
+			}
+			spVertexAttachment_computeWorldVertices(mesh, slot, 0, verticesLength, tempVerts, 0, 2);
+		}
+		if (Point_In_Polygon_2D1(px, py, verticesLength, tempVerts)) {
+			if (re == NULL) return 1;
+			re->count += 1;
+			if (re->capacity < re->count) {
+				if (re->list != NULL) {
+					void** resized = MemRealloc(re->list, sizeof(void*) * re->capacity * 2);
+					if (resized == NULL) {
+						re->capacity = -1;
+						return 1;
+					}
+					re->list = resized;
+				}
+				else {
+					re->capacity = 8;
+					re->list = MemAlloc(sizeof(void*) * 16);
+					if (re->list == NULL) {
+						re->capacity = -1;
+						return 1;
+					}
+				}
+			}
+			re->list[re->count - 1] = attachment;
+		}
+	}
+	return re != NULL && re->count != 0;
+}
+
+__declspec(dllexport) void spSkeleton_getAabbBox(spSkeleton* self, Rectangle* rect) {
 	float minX = 3.402823466e+38F;
 	float minY = 3.402823466e+38F;
 	float maxX = 1.175494351e-38F;
@@ -215,9 +275,15 @@ __declspec(dllexport) int spSkeleton_containsPoint(spSkeleton* self, float px, f
 			}
 			spVertexAttachment_computeWorldVertices(mesh, slot, 0, verticesLength, tempVerts, 0, 2);
 		}
-		if (Point_In_Polygon_2D1(px, py, verticesLength, tempVerts)) {
-			return 1;
+		for (int i = 0; i < verticesLength; i += 2) {
+			minX = MIN(minX, tempVerts[i]);
+			maxX = MAX(maxX, tempVerts[i]);
+			minY = MIN(minY, tempVerts[i | 1]);
+			maxY = MAX(maxY, tempVerts[i | 1]);
 		}
 	}
-	return 0;
+	rect->x = minX;
+	rect->y = minY;
+	rect->width = maxX - minX;
+	rect->height = maxY - minY;
 }
