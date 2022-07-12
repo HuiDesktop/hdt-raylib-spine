@@ -60,7 +60,7 @@ void addVertex(float x, float y, float u, float v, float r, float g, float b, fl
 }
 
 
-void engine_draw_region(Vertex* vertices, Texture* texture, Vector3 position, int* vertex_order) {
+void engine_draw_region(Vertex* vertices, Texture* texture, int* vertex_order) {
     Vertex vertex;
     rlSetTexture(texture->id);
     {
@@ -91,7 +91,7 @@ void engine_draw_region(Vertex* vertices, Texture* texture, Vector3 position, in
 }
 rlSetTexture(0);
 }
-void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, Vector3 position, int* vertex_order, bool reverse) {
+void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, int* vertex_order, bool reverse) {
     Vertex vertex;
     {
         for (int vertexIndex = start; vertexIndex < count; vertexIndex += 3) {
@@ -190,7 +190,7 @@ int VERTEX_ORDER_INVERSE[] = { 4, 2, 1, 0 };
 #define GL_SRC_ALPHA_SATURATE 0x0308
 #define GL_FUNC_ADD 0x8006
 
-void drawSkeleton(spSkeleton* skeleton, Vector3* position, bool PMA) {
+void drawSkeleton(spSkeleton* skeleton, bool PMA) {
     int blend_mode = 4; //This mode doesn't exist
     int* vertex_order = (skeleton->scaleX * skeleton->scaleY < 0) ? VERTEX_ORDER_NORMAL : VERTEX_ORDER_INVERSE;
     // For each slot in the draw order array of the skeleton
@@ -287,7 +287,7 @@ void drawSkeleton(spSkeleton* skeleton, Vector3* position, bool PMA) {
                 BeginBlendMode(BLEND_CUSTOM);
             }
 
-            engine_draw_region(vertices, texture, *position, vertex_order);
+            engine_draw_region(vertices, texture, vertex_order);
         }
         else if (attachment->type == SP_ATTACHMENT_MESH) {
             // Cast to an spMeshAttachment so we can get the rendererObject
@@ -347,7 +347,7 @@ void drawSkeleton(spSkeleton* skeleton, Vector3* position, bool PMA) {
                 BeginBlendMode(BLEND_CUSTOM);
             }
             // Draw the mesh we created for the attachment
-            engine_drawMesh(vertices, 0, vertexIndex, texture, *position, vertex_order, (skeleton->scaleX < 0) ^(skeleton->scaleY < 0));
+            engine_drawMesh(vertices, 0, vertexIndex, texture, vertex_order, (skeleton->scaleX < 0) ^(skeleton->scaleY < 0));
         }
     }
     EndBlendMode(); //Exit out
