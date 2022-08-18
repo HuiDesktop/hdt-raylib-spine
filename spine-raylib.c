@@ -59,8 +59,7 @@ void addVertex(float x, float y, float u, float v, float r, float g, float b, fl
     *index += 1;
 }
 
-
-void engine_draw_region(Vertex* vertices, Texture* texture, int* vertex_order) {
+void engine_draw_region(Vertex* vertices, Texture* texture) {
     Vertex vertex;
     rlSetTexture(texture->id);
     {
@@ -68,7 +67,7 @@ void engine_draw_region(Vertex* vertices, Texture* texture, int* vertex_order) {
         {
             rlNormal3f(0.0f, 0.0f, 1.0f);
             for (int i = 0; i < 4; i++) {
-                vertex = vertices[vertex_order[i]];
+                vertex = vertices[i];
                 rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
                 rlTexCoord2f(vertex.u, vertex.v);
                 rlVertex2f(vertex.x, vertex.y);
@@ -91,7 +90,7 @@ void engine_draw_region(Vertex* vertices, Texture* texture, int* vertex_order) {
 }
 rlSetTexture(0);
 }
-void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, int* vertex_order, bool reverse) {
+void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture) {
     Vertex vertex;
     {
         for (int vertexIndex = start; vertexIndex < count; vertexIndex += 3) {
@@ -99,20 +98,12 @@ void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture, i
             rlBegin(RL_QUADS);
             {
                 int i;
-                if (reverse)
-                    for (i = 0; i < 3; i++) {
-                        vertex = vertices[vertexIndex + i];
-                        rlTexCoord2f(vertex.u, vertex.v);
-                        rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
-                        rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
-                    }
-                else
-                    for (i = 2; i > -1; i--) {
-                        vertex = vertices[vertexIndex + i];
-                        rlTexCoord2f(vertex.u, vertex.v);
-                        rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
-                        rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
-                    }
+                for (i = 2; i > -1; i--) {
+                    vertex = vertices[vertexIndex + i];
+                    rlTexCoord2f(vertex.u, vertex.v);
+                    rlColor4f(vertex.r, vertex.g, vertex.b, vertex.a);
+                    rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
+                }
                 rlVertex3f(vertex.x, vertex.y, anti_z_fighting_index);
             }
             rlEnd();
@@ -173,8 +164,6 @@ void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
 #define MAX_VERTICES_PER_ATTACHMENT 2048
 float worldVerticesPositions[MAX_VERTICES_PER_ATTACHMENT];
 Vertex vertices[MAX_VERTICES_PER_ATTACHMENT];
-int VERTEX_ORDER_NORMAL[] = { 0, 1, 2, 4 };
-int VERTEX_ORDER_INVERSE[] = { 4, 2, 1, 0 };
 
 // Definition from glad.h
 #define GL_ZERO 0
@@ -192,7 +181,6 @@ int VERTEX_ORDER_INVERSE[] = { 4, 2, 1, 0 };
 
 void drawSkeleton(spSkeleton* skeleton, bool PMA) {
     int blend_mode = 4; //This mode doesn't exist
-    int* vertex_order = (skeleton->scaleX * skeleton->scaleY < 0) ? VERTEX_ORDER_NORMAL : VERTEX_ORDER_INVERSE;
     // For each slot in the draw order array of the skeleton
     anti_z_fighting_index = SP_LAYER_SPACING_BASE;
     for (int i = 0; i < skeleton->slotsCount; ++i) {
@@ -234,8 +222,6 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             // before rendering via spSkeleton_updateWorldTransform
             spRegionAttachment_computeWorldVertices(regionAttachment, slot->bone, worldVerticesPositions, 0, 2);
 
-            // Create 2 triangles, with 3 vertices each from the region's
-            // world vertex positions and its UV coordinates (in the range [0-1]).
             addVertex(worldVerticesPositions[0], worldVerticesPositions[1],
                 regionAttachment->uvs[0], regionAttachment->uvs[1],
                 tintR, tintG, tintB, tintA, &vertexIndex);
@@ -248,16 +234,8 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
                 regionAttachment->uvs[4], regionAttachment->uvs[5],
                 tintR, tintG, tintB, tintA, &vertexIndex);
 
-            addVertex(worldVerticesPositions[4], worldVerticesPositions[5],
-                regionAttachment->uvs[4], regionAttachment->uvs[5],
-                tintR, tintG, tintB, tintA, &vertexIndex);
-
             addVertex(worldVerticesPositions[6], worldVerticesPositions[7],
                 regionAttachment->uvs[6], regionAttachment->uvs[7],
-                tintR, tintG, tintB, tintA, &vertexIndex);
-
-            addVertex(worldVerticesPositions[0], worldVerticesPositions[1],
-                regionAttachment->uvs[0], regionAttachment->uvs[1],
                 tintR, tintG, tintB, tintA, &vertexIndex);
 
             if (slot->data->blendMode != blend_mode)
@@ -287,7 +265,7 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
                 BeginBlendMode(BLEND_CUSTOM);
             }
 
-            engine_draw_region(vertices, texture, vertex_order);
+            engine_draw_region(vertices, texture);
         }
         else if (attachment->type == SP_ATTACHMENT_MESH) {
             // Cast to an spMeshAttachment so we can get the rendererObject
@@ -347,7 +325,7 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
                 BeginBlendMode(BLEND_CUSTOM);
             }
             // Draw the mesh we created for the attachment
-            engine_drawMesh(vertices, 0, vertexIndex, texture, vertex_order, (skeleton->scaleX < 0) ^(skeleton->scaleY < 0));
+            engine_drawMesh(vertices, 0, vertexIndex, texture);
         }
     }
     EndBlendMode(); //Exit out
