@@ -156,8 +156,8 @@ void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
     Texture2D* t = texture_2d_create((char*)path);
 
     self->rendererObject = t;
-    self->width = t->width;
-    self->height = t->height;
+    if (self->width == 0) self->width = t->width;
+    if (self->height == 0) self->height = t->height;
 }
 
 
