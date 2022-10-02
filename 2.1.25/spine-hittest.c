@@ -231,18 +231,19 @@ __declspec(dllexport) int spSkeleton_containsPoint(spSkeleton* self, const float
 			re->count += 1;
 			if (re->capacity < re->count) {
 				if (re->list != NULL) {
-					void** resized = MemRealloc(re->list, (int)sizeof(void*) * re->capacity * 2);
+					re->capacity <<= 1;
+					void** resized = MemRealloc(re->list, sizeof(void*) * re->capacity);
 					if (resized == NULL) {
-						re->capacity = -1;
+						re->capacity >>= 1;
 						return 1;
 					}
 					re->list = resized;
 				}
 				else {
 					re->capacity = 8;
-					re->list = MemAlloc(sizeof(void*) * 16);
+					re->list = MemAlloc(sizeof(void*) * 8);
 					if (re->list == NULL) {
-						re->capacity = -1;
+						re->capacity = 0;
 						return 1;
 					}
 				}
