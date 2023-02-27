@@ -189,6 +189,33 @@ void addClippingContextVertices(spSkeletonClipping* clipping, float tintR, float
     }
 }
 
+void setBlendMode(int blend_mode, int pma) {
+    switch (blend_mode)
+	{
+	default: //Normal
+		if (pma) {
+			rlSetBlendFactors(pma ? GL_ONE : GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
+			rlSetBlendMode(RL_BLEND_CUSTOM);
+		} else {
+			rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
+			rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE); // actually it's an ugly patch, as Windows DMA composition needs a pma image
+		}
+		break;
+	case 1: //Additive
+        rlSetBlendFactors(pma ? GL_ONE : GL_SRC_ALPHA, GL_ONE, GL_FUNC_ADD);
+        rlSetBlendMode(RL_BLEND_CUSTOM);
+        break;
+    case 2: //Multiply
+        rlSetBlendFactors(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
+        rlSetBlendMode(RL_BLEND_CUSTOM);
+        break;
+    case 3: //Screen
+        rlSetBlendFactors(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_FUNC_ADD);
+        rlSetBlendMode(RL_BLEND_CUSTOM);
+        break;
+    }
+}
+
 void drawSkeleton(spSkeleton* skeleton, bool PMA) {
     int blend_mode = 4; //This mode doesn't exist
     spSkeletonClipping* clipping = spSkeletonClipping_create();
@@ -257,28 +284,7 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             if (slot->data->blendMode != blend_mode)
             {
                 blend_mode = slot->data->blendMode;
-                switch (blend_mode)
-                {
-                default: //Normal
-                    rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
-                    //rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-                    //rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                case 1: //Additive
-                    rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                case 2: //Multiply
-                    rlSetBlendFactors(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                case 3: //Screen
-                    rlSetBlendFactors(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                }
-                //BeginBlendMode(BLEND_CUSTOM);
+                setBlendMode(blend_mode, PMA);
             }
 
             engine_draw_region(vertices, texture);
@@ -324,28 +330,7 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             if (slot->data->blendMode != blend_mode)
             {
                 blend_mode = slot->data->blendMode;
-                switch (blend_mode)
-                {
-                default: //Normal
-                    rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
-                    //rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-                    //rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                case 1: //Additive
-                    rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                case 2: //Multiply
-                    rlSetBlendFactors(GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                case 3: //Screen
-                    rlSetBlendFactors(GL_ONE, GL_ONE_MINUS_SRC_COLOR, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
-                    break;
-                }
-                //BeginBlendMode(BLEND_CUSTOM);
+                setBlendMode(blend_mode, PMA);
             }
             // Draw the mesh we created for the attachment
             engine_drawMesh(vertices, 0, vertexIndex, texture);
