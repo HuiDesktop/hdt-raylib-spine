@@ -240,7 +240,6 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
 
             if (slot->data->blendMode != blend_mode)
             {
-                EndBlendMode();
                 blend_mode = slot->data->blendMode;
                 switch (blend_mode)
                 {
@@ -302,7 +301,6 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             }
             if (slot->data->blendMode != blend_mode)
             {
-                EndBlendMode();
                 blend_mode = slot->data->blendMode;
                 switch (blend_mode)
                 {

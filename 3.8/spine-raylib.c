@@ -240,13 +240,12 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
 
             if (slot->data->blendMode != blend_mode)
             {
-                EndBlendMode();
                 blend_mode = slot->data->blendMode;
                 switch (blend_mode)
                 {
                 default: //Normal
-                    rlSetBlendFactors(PMA ?  GL_ONE : GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
+                    rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
+                    rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
                     break;
                 case 1: //Additive
                     rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE, GL_FUNC_ADD);
@@ -261,8 +260,6 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
                     rlSetBlendMode(RL_BLEND_CUSTOM);
                     break;
                 }
-
-                BeginBlendMode(BLEND_CUSTOM);
             }
 
             engine_draw_region(vertices, texture);
@@ -301,13 +298,12 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             }
             if (slot->data->blendMode != blend_mode)
             {
-                EndBlendMode();
                 blend_mode = slot->data->blendMode;
                 switch (blend_mode)
                 {
                 default: //Normal
-                    rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-                    rlSetBlendMode(RL_BLEND_CUSTOM);
+                    rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
+                    rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
                     break;
                 case 1: //Additive
                     rlSetBlendFactors(PMA ? GL_ONE : GL_SRC_ALPHA, GL_ONE, GL_FUNC_ADD);
@@ -322,7 +318,6 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
                     rlSetBlendMode(RL_BLEND_CUSTOM);
                     break;
                 }
-                BeginBlendMode(BLEND_CUSTOM);
             }
             // Draw the mesh we created for the attachment
             engine_drawMesh(vertices, 0, vertexIndex, texture);
