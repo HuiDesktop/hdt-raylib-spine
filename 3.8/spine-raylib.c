@@ -18,6 +18,7 @@ float anti_z_fighting_index = SP_LAYER_SPACING_BASE;
 #define MAX_TEXTURES 10
 static Texture2D tm_textures[MAX_TEXTURES] = {0};
 static int texture_index = 0;
+static unsigned short rectangleTriangles[] = {0, 1, 2, 2, 3, 0};
 
 char *_spUtil_readFile(const char *path, int *length) {
     return _spReadFile(path, length);
@@ -179,8 +180,19 @@ Vertex vertices[MAX_VERTICES_PER_ATTACHMENT];
 #define GL_SRC_ALPHA_SATURATE 0x0308
 #define GL_FUNC_ADD 0x8006
 
+void addClippingContextVertices(spSkeletonClipping* clipping, float tintR, float tintG, float tintB, float tintA, int* vertexIndex) {
+    for (int i = 0; i < clipping->clippedTriangles->size; ++i) {
+        int index = clipping->clippedTriangles->items[i] << 1;
+        addVertex(clipping->clippedVertices->items[index], clipping->clippedVertices->items[index + 1],
+            clipping->clippedUVs->items[index], clipping->clippedUVs->items[index + 1],
+            tintR, tintG, tintB, tintA, vertexIndex);
+    }
+}
+
 void drawSkeleton(spSkeleton* skeleton, bool PMA) {
     int blend_mode = 4; //This mode doesn't exist
+    spSkeletonClipping* clipping = spSkeletonClipping_create();
+
     // For each slot in the draw order array of the skeleton
     anti_z_fighting_index = SP_LAYER_SPACING_BASE;
     for (int i = 0; i < skeleton->slotsCount; ++i) {
@@ -221,22 +233,27 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             // bone to which the slot (and hence attachment) is attached has been calculated
             // before rendering via spSkeleton_updateWorldTransform
             spRegionAttachment_computeWorldVertices(regionAttachment, slot->bone, worldVerticesPositions, 0, 2);
+            
+            if (spSkeletonClipping_isClipping(clipping)) {
+                spSkeletonClipping_clipTriangles(clipping, worldVerticesPositions, 8, rectangleTriangles, 6, regionAttachment->uvs, 2);
+                addClippingContextVertices(clipping, tintR, tintG, tintB, tintA, &vertexIndex);
+            } else {
+                addVertex(worldVerticesPositions[0], worldVerticesPositions[1],
+                    regionAttachment->uvs[0], regionAttachment->uvs[1],
+                    tintR, tintG, tintB, tintA, &vertexIndex);
 
-            addVertex(worldVerticesPositions[0], worldVerticesPositions[1],
-                regionAttachment->uvs[0], regionAttachment->uvs[1],
-                tintR, tintG, tintB, tintA, &vertexIndex);
+                addVertex(worldVerticesPositions[2], worldVerticesPositions[3],
+                    regionAttachment->uvs[2], regionAttachment->uvs[3],
+                    tintR, tintG, tintB, tintA, &vertexIndex);
 
-            addVertex(worldVerticesPositions[2], worldVerticesPositions[3],
-                regionAttachment->uvs[2], regionAttachment->uvs[3],
-                tintR, tintG, tintB, tintA, &vertexIndex);
+                addVertex(worldVerticesPositions[4], worldVerticesPositions[5],
+                    regionAttachment->uvs[4], regionAttachment->uvs[5],
+                    tintR, tintG, tintB, tintA, &vertexIndex);
 
-            addVertex(worldVerticesPositions[4], worldVerticesPositions[5],
-                regionAttachment->uvs[4], regionAttachment->uvs[5],
-                tintR, tintG, tintB, tintA, &vertexIndex);
-
-            addVertex(worldVerticesPositions[6], worldVerticesPositions[7],
-                regionAttachment->uvs[6], regionAttachment->uvs[7],
-                tintR, tintG, tintB, tintA, &vertexIndex);
+                addVertex(worldVerticesPositions[6], worldVerticesPositions[7],
+                    regionAttachment->uvs[6], regionAttachment->uvs[7],
+                    tintR, tintG, tintB, tintA, &vertexIndex);
+            }
 
             if (slot->data->blendMode != blend_mode)
             {
@@ -287,15 +304,21 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             spVertexAttachment_computeWorldVertices(SUPER(mesh), slot, 0, mesh->super.worldVerticesLength,
                 worldVerticesPositions, 0, 2);
 
-            // Mesh attachments use an array of vertices, and an array of indices to define which
-            // 3 vertices make up each triangle. We loop through all triangle indices
-            // and simply emit a vertex for each triangle's vertex.
-            for (int i = 0; i < mesh->trianglesCount; ++i) {
-                int index = mesh->triangles[i] << 1;
-                addVertex(worldVerticesPositions[index], worldVerticesPositions[index + 1],
-                    mesh->uvs[index], mesh->uvs[index + 1],
-                    tintR, tintG, tintB, tintA, &vertexIndex);
+            if (spSkeletonClipping_isClipping(clipping)) {
+                spSkeletonClipping_clipTriangles(clipping, worldVerticesPositions, mesh->super.worldVerticesLength, mesh->triangles, mesh->trianglesCount, mesh->uvs, 2);
+                addClippingContextVertices(clipping, tintR, tintG, tintB, tintA, &vertexIndex);
+            } else {
+                // Mesh attachments use an array of vertices, and an array of indices to define which
+                // 3 vertices make up each triangle. We loop through all triangle indices
+                // and simply emit a vertex for each triangle's vertex.
+                for (int i = 0; i < mesh->trianglesCount; ++i) {
+                    int index = mesh->triangles[i] << 1;
+                    addVertex(worldVerticesPositions[index], worldVerticesPositions[index + 1],
+                        mesh->uvs[index], mesh->uvs[index + 1],
+                        tintR, tintG, tintB, tintA, &vertexIndex);
+                }
             }
+
             if (slot->data->blendMode != blend_mode)
             {
                 blend_mode = slot->data->blendMode;
@@ -321,7 +344,12 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             }
             // Draw the mesh we created for the attachment
             engine_drawMesh(vertices, 0, vertexIndex, texture);
+        } else if (attachment->type == SP_ATTACHMENT_CLIPPING) {
+            spSkeletonClipping_clipStart(clipping, slot, (spClippingAttachment*)attachment);
         }
+
+        spSkeletonClipping_clipEnd(clipping, slot);
     }
+    spSkeletonClipping_dispose(clipping);
     EndBlendMode(); //Exit out
 }
