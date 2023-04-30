@@ -200,7 +200,7 @@ void setBlendMode(int blend_mode, int pma) {
         else {
             rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
             rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE); // actually it's an ugly patch, as Windows DMA composition needs a pma image
-        }
+       }
         break;
     case 1: //Additive
         rlSetBlendFactors(pma ? GL_ONE : GL_SRC_ALPHA, GL_ONE, GL_FUNC_ADD);
@@ -231,7 +231,7 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
         // with the next slot in the draw order if no
         // attachment is active on the slot
         spAttachment* attachment = slot->attachment;
-        if (!attachment) continue;
+        if (!attachment) goto SLOT_END;
 
         // Calculate the tinting color based on the skeleton's color
         // and the slot's color. Each color channel is given in the
@@ -261,10 +261,17 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             // bone to which the slot (and hence attachment) is attached has been calculated
             // before rendering via spSkeleton_updateWorldTransform
             spRegionAttachment_computeWorldVertices(regionAttachment, slot->bone, worldVerticesPositions, 0, 2);
+
+            if (slot->data->blendMode != blend_mode)
+            {
+                blend_mode = slot->data->blendMode;
+                setBlendMode(blend_mode, PMA);
+            }
             
             if (spSkeletonClipping_isClipping(clipping)) {
                 spSkeletonClipping_clipTriangles(clipping, worldVerticesPositions, 8, rectangleTriangles, 6, regionAttachment->uvs, 2);
                 addClippingContextVertices(clipping, tintR, tintG, tintB, tintA, &vertexIndex);
+                engine_drawMesh(vertices, 0, vertexIndex, texture);
             } else {
                 addVertex(worldVerticesPositions[0], worldVerticesPositions[1],
                     regionAttachment->uvs[0], regionAttachment->uvs[1],
@@ -281,15 +288,8 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
                 addVertex(worldVerticesPositions[6], worldVerticesPositions[7],
                     regionAttachment->uvs[6], regionAttachment->uvs[7],
                     tintR, tintG, tintB, tintA, &vertexIndex);
+                engine_draw_region(vertices, texture);
             }
-
-            if (slot->data->blendMode != blend_mode)
-            {
-                blend_mode = slot->data->blendMode;
-                setBlendMode(blend_mode, PMA);
-            }
-
-            engine_draw_region(vertices, texture);
         }
         else if (attachment->type == SP_ATTACHMENT_MESH) {
             // Cast to an spMeshAttachment so we can get the rendererObject
@@ -339,9 +339,13 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
         } else if (attachment->type == SP_ATTACHMENT_CLIPPING) {
             spSkeletonClipping_clipStart(clipping, slot, (spClippingAttachment*)attachment);
         }
+        else {
+            fprintf(stderr, "Error %d\n", attachment->type);
+        }
 
-        spSkeletonClipping_clipEnd(clipping, slot);
-    }
+	SLOT_END:
+		spSkeletonClipping_clipEnd(clipping, slot);
+	}
     spSkeletonClipping_dispose(clipping);
     EndBlendMode(); //Exit out
 }
