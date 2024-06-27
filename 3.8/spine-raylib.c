@@ -194,8 +194,8 @@ void setBlendMode(int blend_mode, int pma) {
     {
     default: //Normal
         if (pma) {
-            rlSetBlendFactors(pma ? GL_ONE : GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD);
-            rlSetBlendMode(RL_BLEND_CUSTOM);
+            rlSetBlendFactorsSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
+            rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
         }
         else {
             rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
@@ -231,7 +231,7 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
         // with the next slot in the draw order if no
         // attachment is active on the slot
         spAttachment* attachment = slot->attachment;
-        if (!attachment) goto SLOT_END;
+        if (!slot->bone->active || !attachment) goto SLOT_END;
 
         // Calculate the tinting color based on the skeleton's color
         // and the slot's color. Each color channel is given in the
@@ -300,7 +300,14 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             // than our scratch buffer, we don't render the mesh. We do this here
             // for simplicity, in production you want to reallocate the scratch buffer
             // to fit the mesh.
-            if (mesh->super.worldVerticesLength > MAX_VERTICES_PER_ATTACHMENT) continue;
+            if (mesh->super.worldVerticesLength > MAX_VERTICES_PER_ATTACHMENT) {
+                static int has_reported_max = 0;
+                if (has_reported_max == 0) {
+                    has_reported_max = 1;
+                    fprintf(stderr, "Error: mesh->super.worldVerticesLength > MAX_VERTICES_PER_ATTACHMENT\n");
+                }
+                continue;
+            }
 
             // Our engine specific Texture is stored in the spAtlasRegion which was
             // assigned to the attachment on load. It represents the texture atlas
@@ -340,7 +347,11 @@ void drawSkeleton(spSkeleton* skeleton, bool PMA) {
             spSkeletonClipping_clipStart(clipping, slot, (spClippingAttachment*)attachment);
         }
         else {
-            fprintf(stderr, "Error %d\n", attachment->type);
+            static int has_reported_unknown_type = 0;
+            if (has_reported_unknown_type == 0) {
+                fprintf(stderr, "Error %d\n", attachment->type);
+                has_reported_unknown_type = 1;
+            }
         }
 
 	SLOT_END:
