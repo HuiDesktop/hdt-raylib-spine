@@ -132,11 +132,22 @@ void engine_drawMesh(Vertex* vertices, int start, int count, Texture* texture) {
 }
 
 Texture2D* texture_2d_create(char* path) {
-    tm_textures[texture_index] = LoadTexture(path);
-    Texture2D* t = &tm_textures[texture_index];
-    SetTextureFilter(*t, TEXTURE_FILTER_BILINEAR);
-    texture_index++;
-    return t;
+    
+    Image image = LoadImage(path);
+
+    if (image.data != NULL)
+    {
+		//ImageMipmaps(&image);
+        tm_textures[texture_index] = LoadTextureFromImage(image);
+        UnloadImage(image);
+	}
+	else
+	{
+		fprintf(stderr, "Error loading image %s\n", path);
+		exit(-1);
+	}
+
+	return &tm_textures[texture_index++];
 }
 
 Texture2D* texture_2d_create1(char* path) {
@@ -155,6 +166,25 @@ void texture_2d_destroy() {
 void _spAtlasPage_createTexture(spAtlasPage* self, const char* path) {
 
     Texture2D* t = texture_2d_create((char*)path);
+
+    // Set warp
+    switch (self->uWrap) {
+	case SP_ATLAS_CLAMPTOEDGE:
+		SetTextureWrap(*t, TEXTURE_WRAP_CLAMP);
+		break;
+	case SP_ATLAS_REPEAT:
+		SetTextureWrap(*t, TEXTURE_WRAP_REPEAT);
+		break;
+	case SP_ATLAS_MIRROREDREPEAT:
+		SetTextureWrap(*t, TEXTURE_WRAP_MIRROR_REPEAT);
+		break;
+    default:
+        exit(-ENOTRECOVERABLE);
+    }
+
+	if (self->vWrap != self->uWrap) {
+		fprintf(stderr, "Warning: different wrap modes for u and v are not supported. Using u wrap mode for v\n");
+	}
 
     self->rendererObject = t;
     if (self->width == 0) self->width = t->width;
@@ -194,8 +224,7 @@ void setBlendMode(int blend_mode, int pma) {
     {
     default: //Normal
         if (pma) {
-            rlSetBlendFactorsSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
-            rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
+            BeginBlendMode(RL_BLEND_ALPHA_PREMULTIPLY);
         }
         else {
             rlSetBlendFactorsSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_FUNC_ADD);
